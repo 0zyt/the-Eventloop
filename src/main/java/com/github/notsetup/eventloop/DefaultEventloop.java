@@ -1,11 +1,12 @@
 package com.github.notsetup.eventloop;
 
-import lombok.extern.java.Log;
+
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -18,6 +19,19 @@ public class DefaultEventloop implements Eventloop {
     }
 
     @Override
+    public void add(HandlerProvider handlerProvider, SocketChannel socketChannel) throws IOException {
+        SelectionKey key = socketChannel
+                .configureBlocking(false)
+                .register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        EventloopContext ctx = new EventloopContext(socketChannel, key, Thread.currentThread(), selector);
+        Handler handler = handlerProvider.provide(ctx);
+        handler.register();
+        key.attach(handler);
+        log.info("register successful!");
+        selector.wakeup();
+    }
+
+    @Override
     public void run() {
         log.info("Eventloop start.");
         try {
@@ -27,7 +41,15 @@ public class DefaultEventloop implements Eventloop {
                 Iterator<SelectionKey> iterator = keys.iterator();
                 while (iterator.hasNext()){
                     SelectionKey key = iterator.next();
-
+                    Handler handler = (Handler) key.attachment();
+                    if (key.isWritable()){
+                        log.info("{}",handler);
+                        handler.write();
+                    }
+                    if (key.isReadable()){
+                        log.info("{}",handler);
+                        handler.read();
+                    }
                     iterator.remove();
                 }
             }

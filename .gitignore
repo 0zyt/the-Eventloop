@@ -191,5 +191,4 @@ nbdist/
 .idea/gradle.xml
 .idea/inspectionProfiles/
 .idea/vcs.xml
-build.gradle
-settings.gradle
+
